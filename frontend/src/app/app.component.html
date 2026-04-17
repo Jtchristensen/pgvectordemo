@@ -1,0 +1,35 @@
+<div class="shell">
+  <nav class="sidebar">
+    <div class="brand">
+      <span class="brand-icon">⬡</span>
+      <div class="brand-text">
+        <span class="brand-name">pgVector</span>
+        <span class="brand-sub">Demo</span>
+      </div>
+    </div>
+
+    <div class="nav-links">
+      <a routerLink="/chat" routerLinkActive="active" class="nav-link">
+        <span class="nav-icon">💬</span>
+        <span>Chat</span>
+      </a>
+      <a routerLink="/knowledge-base" routerLinkActive="active" class="nav-link">
+        <span class="nav-icon">📚</span>
+        <span>Knowledge Base</span>
+      </a>
+      <a routerLink="/visualization" routerLinkActive="active" class="nav-link">
+        <span class="nav-icon">🔮</span>
+        <span>Visualization</span>
+      </a>
+    </div>
+
+    <div class="sidebar-footer">
+      <span class="tech-badge">PostgreSQL + pgvector</span>
+      <span class="tech-badge">Ollama</span>
+    </div>
+  </nav>
+
+  <main class="content">
+    <router-outlet />
+  </main>
+</div>

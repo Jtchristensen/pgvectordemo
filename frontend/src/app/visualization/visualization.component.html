@@ -1,0 +1,108 @@
+<div class="viz-page">
+  <header class="page-header">
+    <div>
+      <h1>Vector Space Visualization</h1>
+      <p class="subtitle">PCA projection of 768-dimensional embeddings stored in pgvector</p>
+    </div>
+    <div class="stats">
+      <div class="stat">
+        <span class="stat-val">{{ totalPoints() }}</span>
+        <span class="stat-label">vectors</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <span class="stat-val">{{ uniqueDocs() }}</span>
+        <span class="stat-label">documents</span>
+      </div>
+      @if (highlightedIds().length > 0) {
+        <div class="stat-divider"></div>
+        <div class="stat highlighted">
+          <span class="stat-val">{{ highlightedIds().length }}</span>
+          <span class="stat-label">retrieved</span>
+        </div>
+      }
+    </div>
+  </header>
+
+  @if (totalPoints() === 0) {
+    <div class="empty-viz">
+      <div class="empty-icon">🔮</div>
+      <h3>No vectors yet</h3>
+      <p>Upload documents in the Knowledge Base to see their embeddings plotted here in real-time.</p>
+      <div class="dim-note">
+        Each point represents a text chunk encoded as a 768-dim vector by <code>nomic-embed-text</code>,
+        projected to 2D using PCA.
+      </div>
+    </div>
+  } @else {
+    <div class="viz-body">
+      <div class="chart-wrapper">
+        @if (highlightedIds().length > 0) {
+          <div class="highlight-banner">
+            <span class="highlight-dot">●</span>
+            <span>
+              <strong>{{ highlightedIds().length }} chunks</strong> highlighted in gold —
+              these were retrieved for your last RAG query
+            </span>
+          </div>
+        }
+        <div class="chart-container">
+          <canvas #chartCanvas></canvas>
+        </div>
+        <div class="chart-note">
+          Each point = one text chunk. Semantically similar text clusters together.
+          Hover a point to see the chunk text.
+        </div>
+      </div>
+
+      <div class="sidebar-panel">
+        <h3 class="panel-title">Documents</h3>
+        <div class="doc-legend">
+          @for (doc of docList; track doc.id) {
+            <div class="legend-item">
+              <span class="legend-dot" [style.background]="doc.color"></span>
+              <div class="legend-info">
+                <span class="legend-name">{{ doc.name }}</span>
+                <span class="legend-count mono">{{ doc.count }} chunks</span>
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="explainer-panel">
+          <h3 class="panel-title" style="margin-top: 24px">What you're seeing</h3>
+          <div class="explainer-items">
+            <div class="explainer-item">
+              <span class="ex-icon">🎯</span>
+              <div>
+                <strong>Clusters</strong>
+                <p>Chunks with similar meaning are close together in vector space</p>
+              </div>
+            </div>
+            <div class="explainer-item">
+              <span class="ex-icon">📐</span>
+              <div>
+                <strong>Dimensions</strong>
+                <p>768D → 2D via PCA. Real similarity computed in full 768D space</p>
+              </div>
+            </div>
+            <div class="explainer-item">
+              <span class="ex-icon">🔍</span>
+              <div>
+                <strong>RAG Retrieval</strong>
+                <p>Query a vector → find nearest neighbors → gold points show what was retrieved</p>
+              </div>
+            </div>
+            <div class="explainer-item">
+              <span class="ex-icon">⚡</span>
+              <div>
+                <strong>HNSW Index</strong>
+                <p>PostgreSQL + pgvector uses HNSW for sub-millisecond ANN search</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+</div>

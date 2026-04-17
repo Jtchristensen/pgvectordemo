@@ -1,0 +1,103 @@
+<div class="chat-page">
+  <header class="chat-header">
+    <div class="header-left">
+      <h1>Chat</h1>
+      <p class="subtitle">Ask questions — with or without the knowledge base</p>
+    </div>
+    <div class="header-controls">
+      <button class="btn-ghost" (click)="clearChat()" [disabled]="messages.length === 0">
+        Clear
+      </button>
+      <div class="rag-toggle" [class.active]="useRag()" (click)="toggleRag()">
+        <div class="toggle-track">
+          <div class="toggle-thumb"></div>
+        </div>
+        <span class="toggle-label">RAG Mode</span>
+        <span class="badge" [class]="useRag() ? 'badge-purple' : 'badge-off'">
+          {{ useRag() ? 'ON' : 'OFF' }}
+        </span>
+      </div>
+    </div>
+  </header>
+
+  @if (useRag()) {
+    <div class="rag-banner">
+      <span class="rag-icon">🔍</span>
+      <span>Retrieval-Augmented Generation active — responses will use your uploaded knowledge base</span>
+    </div>
+  }
+
+  <div class="messages-area">
+    @if (messages.length === 0) {
+      <div class="empty-state">
+        <div class="empty-icon">💬</div>
+        <h3>Start a conversation</h3>
+        <p>Try asking something the AI wouldn't know, then upload a document and enable RAG Mode to see the difference.</p>
+        <div class="suggestions">
+          <button class="suggestion" (click)="input = 'What is our company refund policy?'; send()">
+            What is our company refund policy?
+          </button>
+          <button class="suggestion" (click)="input = 'Summarize the key points from my documents'; send()">
+            Summarize my documents
+          </button>
+        </div>
+      </div>
+    }
+
+    @for (msg of messages; track $index) {
+      <div class="message" [class]="msg.role" [class.loading]="msg.loading">
+        <div class="message-avatar">
+          {{ msg.role === 'user' ? '👤' : '🤖' }}
+        </div>
+        <div class="message-body">
+          @if (msg.loading) {
+            <div class="typing-indicator">
+              <span></span><span></span><span></span>
+            </div>
+          } @else {
+            <div class="message-text">{{ msg.content }}</div>
+
+            @if (msg.usedRag && msg.retrievedChunks?.length) {
+              <div class="sources">
+                <div class="sources-header">
+                  <span class="sources-icon">📎</span>
+                  <span>Retrieved {{ msg.retrievedChunks!.length }} chunks from knowledge base</span>
+                </div>
+                @for (chunk of msg.retrievedChunks!; track chunk.id; let ci = $index) {
+                  <div class="source-chunk" (click)="toggleChunk(chunk.id)">
+                    <div class="chunk-meta">
+                      <span class="doc-name">{{ chunk.document }}</span>
+                      <span class="similarity">{{ (chunk.similarity * 100).toFixed(1) }}% match</span>
+                      <span class="expand-icon">{{ expandedChunks.has(chunk.id) ? '▲' : '▼' }}</span>
+                    </div>
+                    @if (expandedChunks.has(chunk.id)) {
+                      <div class="chunk-text mono">{{ chunk.text }}</div>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          }
+        </div>
+      </div>
+    }
+
+    <div #messagesEnd></div>
+  </div>
+
+  <div class="input-area">
+    <div class="input-wrapper">
+      <textarea
+        [(ngModel)]="input"
+        (keydown)="onKeyDown($event)"
+        placeholder="Ask anything... (Enter to send, Shift+Enter for newline)"
+        rows="1"
+        [disabled]="loading"
+        class="message-input"
+      ></textarea>
+      <button class="send-btn" (click)="send()" [disabled]="!input.trim() || loading">
+        {{ loading ? '⏳' : '➤' }}
+      </button>
+    </div>
+  </div>
+</div>

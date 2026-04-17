@@ -1,0 +1,130 @@
+<div class="kb-page">
+  <header class="page-header">
+    <div>
+      <h1>Knowledge Base</h1>
+      <p class="subtitle">Upload documents to embed into pgvector</p>
+    </div>
+    <span class="badge badge-purple">{{ documents().length }} document{{ documents().length !== 1 ? 's' : '' }}</span>
+  </header>
+
+  <div class="page-body">
+    <!-- Upload Zone -->
+    <div
+      class="upload-zone"
+      [class.dragging]="isDragging"
+      [class.uploading]="uploadState()?.status === 'uploading'"
+      (dragover)="onDragOver($event)"
+      (dragleave)="onDragLeave()"
+      (drop)="onDrop($event)"
+      (click)="fileInput.click()"
+    >
+      <input #fileInput type="file" accept=".txt,.pdf,.md" (change)="onFileSelected($event)" style="display:none">
+
+      @if (uploadState(); as state) {
+        @if (state.status === 'uploading') {
+          <div class="upload-progress">
+            <div class="progress-header">
+              <span class="progress-file">📄 {{ state.file.name }}</span>
+              <span class="progress-count mono">{{ state.current }} / {{ state.total }} chunks</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" [style.width.%]="uploadProgress"></div>
+            </div>
+            @if (state.chunkPreview) {
+              <div class="chunk-preview">
+                <span class="preview-label">Processing:</span>
+                <span class="preview-text mono">{{ state.chunkPreview }}</span>
+              </div>
+            }
+            <div class="embedding-note">
+              <span class="pulse-dot"></span>
+              Generating embeddings → storing in pgvector
+            </div>
+          </div>
+        } @else if (state.status === 'complete') {
+          <div class="upload-success">
+            <span class="success-icon">✅</span>
+            <span>{{ state.file.name }} added to knowledge base!</span>
+          </div>
+        } @else if (state.status === 'error') {
+          <div class="upload-error">
+            <span>❌ Error: {{ state.message }}</span>
+          </div>
+        }
+      } @else {
+        <div class="upload-idle">
+          <div class="upload-icon">📤</div>
+          <p class="upload-title">Drop a file here or click to browse</p>
+          <p class="upload-sub">Supports .txt, .pdf, .md — text will be chunked and embedded into pgvector</p>
+        </div>
+      }
+    </div>
+
+    <!-- Documents List -->
+    <div class="docs-section">
+      <h2 class="section-title">
+        <span>Uploaded Documents</span>
+        @if (documents().length > 0) {
+          <span class="section-hint">Click visualization to see embeddings in vector space</span>
+        }
+      </h2>
+
+      @if (documents().length === 0) {
+        <div class="empty-docs">
+          <p>No documents yet. Upload one above to get started.</p>
+        </div>
+      } @else {
+        <div class="docs-list">
+          @for (doc of documents(); track doc.id) {
+            <div class="doc-item">
+              <div class="doc-icon">📄</div>
+              <div class="doc-info">
+                <span class="doc-name">{{ doc.name }}</span>
+                <span class="doc-meta mono">{{ doc.chunk_count }} chunks · {{ doc.created_at | slice:0:10 }}</span>
+              </div>
+              <div class="doc-actions">
+                <span class="badge badge-green">{{ doc.chunk_count }} vectors</span>
+                <button class="btn-danger" (click)="deleteDocument(doc)">Delete</button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- How it works -->
+    <div class="explainer">
+      <h3>How it works</h3>
+      <div class="steps">
+        <div class="step">
+          <span class="step-num">1</span>
+          <div class="step-body">
+            <strong>Text Extraction</strong>
+            <p>Your file is read and text is extracted (supports PDF & plaintext)</p>
+          </div>
+        </div>
+        <div class="step">
+          <span class="step-num">2</span>
+          <div class="step-body">
+            <strong>Chunking</strong>
+            <p>Text is split into ~600-character overlapping chunks for better retrieval</p>
+          </div>
+        </div>
+        <div class="step">
+          <span class="step-num">3</span>
+          <div class="step-body">
+            <strong>Embedding</strong>
+            <p>Each chunk is converted to a 768-dimensional vector using <code>nomic-embed-text</code></p>
+          </div>
+        </div>
+        <div class="step">
+          <span class="step-num">4</span>
+          <div class="step-body">
+            <strong>pgvector Storage</strong>
+            <p>Vectors are stored in PostgreSQL with HNSW index for fast cosine similarity search</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
