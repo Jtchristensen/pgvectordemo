@@ -15,50 +15,45 @@ services:
       timeout: 5s
       retries: 10
 
-  ollama:
-    image: ollama/ollama
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    healthcheck:
-      test: ["CMD-SHELL", "ollama list || exit 1"]
-      interval: 10s
-      timeout: 10s
-      retries: 5
-      start_period: 10s
-
-  ollama-init:
-    image: ollama/ollama
-    depends_on:
-      ollama:
-        condition: service_healthy
+  pgadmin:
+    image: dpage/pgadmin4:latest
     environment:
-      - OLLAMA_HOST=http://ollama:11434
+      PGADMIN_DEFAULT_EMAIL: admin@demo.local
+      PGADMIN_DEFAULT_PASSWORD: demo
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    ports:
+      - "5050:80"
+    volumes:
+      - ./pgadmin/servers.json:/pgadmin4/servers.json:ro
+      - ./pgadmin/pgpass:/pgpass
+      - pgadmin_data:/var/lib/pgadmin
     entrypoint: >
-      sh -c "
-        echo 'Pulling nomic-embed-text...' &&
-        ollama pull nomic-embed-text &&
-        echo 'Pulling llama3.2:3b...' &&
-        ollama pull llama3.2:3b &&
-        echo 'Models ready.'
+      /bin/sh -c "
+        chmod 600 /pgpass;
+        chown pgadmin:pgadmin /pgpass;
+        /entrypoint.sh
       "
-    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   backend:
     build: ./backend
     ports:
-      - "5000:5000"
+      - "5001:5000"
     environment:
       DATABASE_URL: postgresql://demo:demo@postgres:5432/pgvector_demo
-      OLLAMA_HOST: http://ollama:11434
-      EMBED_MODEL: nomic-embed-text
-      LLM_MODEL: llama3.2:3b
-      EMBED_DIM: "768"
+      EMBED_DIM: "1024"
+    models:
+      llm:
+        endpoint_var: LLM_URL
+        model_var: LLM_MODEL
+      embedding:
+        endpoint_var: EMBED_URL
+        model_var: EMBED_MODEL
     depends_on:
       postgres:
-        condition: service_healthy
-      ollama:
         condition: service_healthy
     restart: on-failure
 
@@ -69,6 +64,12 @@ services:
     depends_on:
       - backend
 
+models:
+  llm:
+    model: ai/llama3.1:8B-Q4_K_M
+  embedding:
+    model: ai/mxbai-embed-large
+
 volumes:
   postgres_data:
-  ollama_data:
+  pgadmin_data:

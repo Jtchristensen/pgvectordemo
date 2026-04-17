@@ -99,8 +99,7 @@ export class VisualizationComponent implements OnInit, AfterViewInit, OnDestroy 
             bodyColor: '#94a3b8',
             padding: 12,
             bodyFont: { family: 'JetBrains Mono', size: 11 },
-            titleFont: { family: 'Inter', size: 12, weight: 'bold' },
-            maxWidth: 300
+            titleFont: { family: 'Inter', size: 12, weight: 'bold' }
           }
         },
         scales: {

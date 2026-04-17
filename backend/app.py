@@ -11,7 +11,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from pgvector.psycopg2 import register_vector
 from sklearn.decomposition import PCA
-import ollama
+from openai import OpenAI
 import PyPDF2
 
 logging.basicConfig(level=logging.INFO)
@@ -21,12 +21,17 @@ app = Flask(__name__)
 CORS(app)
 
 DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://demo:demo@localhost:5432/pgvector_demo')
-OLLAMA_HOST = os.environ.get('OLLAMA_HOST', 'http://localhost:11434')
-EMBED_MODEL = os.environ.get('EMBED_MODEL', 'nomic-embed-text')
-LLM_MODEL = os.environ.get('LLM_MODEL', 'llama3.2:3b')
-EMBED_DIM = int(os.environ.get('EMBED_DIM', '768'))
+LLM_URL = os.environ.get('LLM_URL', 'http://model-runner.docker.internal/engines/llama.cpp/v1')
+EMBED_URL = os.environ.get('EMBED_URL', LLM_URL)
+LLM_MODEL = os.environ.get('LLM_MODEL', 'ai/llama3.1:8B-Q4_K_M')
+EMBED_MODEL = os.environ.get('EMBED_MODEL', 'ai/mxbai-embed-large')
+EMBED_DIM = int(os.environ.get('EMBED_DIM', '1024'))
 
-ollama_client = ollama.Client(host=OLLAMA_HOST)
+llm_client = OpenAI(base_url=LLM_URL, api_key='docker-model-runner')
+embed_client = (
+    OpenAI(base_url=EMBED_URL, api_key='docker-model-runner')
+    if EMBED_URL != LLM_URL else llm_client
+)
 
 
 def get_db():
@@ -42,7 +47,7 @@ def init_db():
             conn = get_db()
             cur = conn.cursor()
             cur.execute("CREATE EXTENSION IF NOT EXISTS vector")
-            cur.execute(f"""
+            cur.execute("""
                 CREATE TABLE IF NOT EXISTS documents (
                     id SERIAL PRIMARY KEY,
                     name TEXT NOT NULL,
@@ -75,8 +80,8 @@ def init_db():
 
 
 def get_embedding(text: str) -> np.ndarray:
-    response = ollama_client.embed(model=EMBED_MODEL, input=text)
-    return np.array(response.embeddings[0])
+    response = embed_client.embeddings.create(model=EMBED_MODEL, input=text)
+    return np.array(response.data[0].embedding)
 
 
 def chunk_text(text: str, chunk_size: int = 600, overlap: int = 100):
@@ -106,17 +111,20 @@ def extract_text(file) -> str:
 @app.route('/api/health', methods=['GET'])
 def health():
     try:
-        models = ollama_client.list()
-        model_names = [m.model for m in models.models]
-        embed_ready = any(EMBED_MODEL in m for m in model_names)
-        llm_ready = any(LLM_MODEL in m for m in model_names)
+        models_list = llm_client.models.list()
+        available = [m.id for m in models_list.data]
+        def _match(target):
+            base = target.split(':')[0]
+            return target in available or any(base in m for m in available)
         return jsonify({
             'status': 'ok',
-            'embed_model': EMBED_MODEL,
+            'llm_url': LLM_URL,
+            'embed_url': EMBED_URL,
             'llm_model': LLM_MODEL,
-            'embed_ready': embed_ready,
-            'llm_ready': llm_ready,
-            'available_models': model_names
+            'embed_model': EMBED_MODEL,
+            'llm_ready': _match(LLM_MODEL),
+            'embed_ready': _match(EMBED_MODEL),
+            'available_models': available
         })
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 503
@@ -311,8 +319,11 @@ def chat():
     messages.append({'role': 'user', 'content': message})
 
     try:
-        response = ollama_client.chat(model=LLM_MODEL, messages=messages)
-        reply = response.message.content
+        response = llm_client.chat.completions.create(
+            model=LLM_MODEL,
+            messages=messages
+        )
+        reply = response.choices[0].message.content
     except Exception as e:
         return jsonify({'error': f'LLM error: {e}'}), 503
 
