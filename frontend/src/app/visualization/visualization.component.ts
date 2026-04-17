@@ -1,5 +1,5 @@
 import {
-  Component, OnInit, OnDestroy, ElementRef, ViewChild, AfterViewInit, signal
+  Component, OnInit, OnDestroy, ElementRef, ViewChild, signal
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Chart, ScatterController, LinearScale, PointElement, Tooltip, Legend } from 'chart.js';
@@ -21,8 +21,15 @@ const COLORS = [
   templateUrl: './visualization.component.html',
   styleUrl: './visualization.component.scss'
 })
-export class VisualizationComponent implements OnInit, AfterViewInit, OnDestroy {
-  @ViewChild('chartCanvas') chartCanvas!: ElementRef<HTMLCanvasElement>;
+export class VisualizationComponent implements OnInit, OnDestroy {
+  @ViewChild('chartCanvas')
+  set chartCanvas(ref: ElementRef<HTMLCanvasElement> | undefined) {
+    if (ref && !this.chart) {
+      this.initChart(ref.nativeElement);
+      const pts = this.points();
+      if (pts.length) this.updateChart(pts);
+    }
+  }
 
   chart: Chart | null = null;
   points = signal<VisualizationPoint[]>([]);
@@ -31,7 +38,6 @@ export class VisualizationComponent implements OnInit, AfterViewInit, OnDestroy 
   uniqueDocs = signal(0);
   highlightedIds = signal<number[]>([]);
   private pollSub?: Subscription;
-  private viewInit = false;
 
   constructor(private api: ApiService) {}
 
@@ -46,15 +52,8 @@ export class VisualizationComponent implements OnInit, AfterViewInit, OnDestroy 
       this.totalPoints.set(pts.length);
       const docIds = new Set(pts.map(p => p.document_id));
       this.uniqueDocs.set(docIds.size);
-      if (this.viewInit) this.updateChart(pts);
+      if (this.chart) this.updateChart(pts);
     });
-  }
-
-  ngAfterViewInit() {
-    this.viewInit = true;
-    this.initChart();
-    const pts = this.points();
-    if (pts.length) this.updateChart(pts);
   }
 
   ngOnDestroy() {
@@ -62,8 +61,8 @@ export class VisualizationComponent implements OnInit, AfterViewInit, OnDestroy 
     this.chart?.destroy();
   }
 
-  private initChart() {
-    const ctx = this.chartCanvas.nativeElement.getContext('2d')!;
+  private initChart(canvasEl: HTMLCanvasElement) {
+    const ctx = canvasEl.getContext('2d')!;
     this.chart = new Chart(ctx, {
       type: 'scatter',
       data: { datasets: [] },

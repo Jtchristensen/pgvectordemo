@@ -39,7 +39,7 @@ Open **http://localhost:8080** (the app) and **http://localhost:5050** (pgAdmin)
 ### pgAdmin access
 
 - URL: **http://localhost:5050**
-- Login: `admin@demo.local` / `demo`
+- Login: `admin@example.com` / `demo`
 - The `pgvector demo` server is pre-registered and auto-connects (password from mounted pgpass file)
 
 Useful demo queries once connected:

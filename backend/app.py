@@ -44,9 +44,17 @@ def init_db():
     retries = 10
     for i in range(retries):
         try:
+            # First pass: create extension WITHOUT register_vector (chicken/egg).
+            raw = psycopg2.connect(DATABASE_URL)
+            raw.autocommit = True
+            cur = raw.cursor()
+            cur.execute("CREATE EXTENSION IF NOT EXISTS vector")
+            cur.close()
+            raw.close()
+
+            # Second pass: extension exists, now we can register vector type and create schema.
             conn = get_db()
             cur = conn.cursor()
-            cur.execute("CREATE EXTENSION IF NOT EXISTS vector")
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS documents (
                     id SERIAL PRIMARY KEY,

@@ -17,8 +17,9 @@ services:
 
   pgadmin:
     image: dpage/pgadmin4:latest
+    user: root
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@demo.local
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
       PGADMIN_DEFAULT_PASSWORD: demo
       PGADMIN_CONFIG_SERVER_MODE: "False"
       PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
@@ -30,9 +31,9 @@ services:
       - pgadmin_data:/var/lib/pgadmin
     entrypoint: >
       /bin/sh -c "
-        chmod 600 /pgpass;
-        chown pgadmin:pgadmin /pgpass;
-        /entrypoint.sh
+        chmod 600 /pgpass &&
+        chown 5050:5050 /pgpass &&
+        exec /entrypoint.sh
       "
     depends_on:
       postgres:

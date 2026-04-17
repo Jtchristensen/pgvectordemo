@@ -37,6 +37,14 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
+app-chat, app-knowledge-base, app-visualization {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;

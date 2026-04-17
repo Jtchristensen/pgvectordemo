@@ -49,7 +49,7 @@ echo "  Ready!"
 echo "=========================================="
 echo "  Frontend:  http://localhost:8080"
 echo "  Backend:   http://localhost:5001/api/health"
-echo "  pgAdmin:   http://localhost:5050   (admin@demo.local / demo)"
+echo "  pgAdmin:   http://localhost:5050   (admin@example.com / demo)"
 echo "  Postgres:  localhost:5432          (demo / demo)"
 echo "  Models:    docker model ls"
 echo
